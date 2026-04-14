@@ -1,7 +1,12 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 export default function Admin() {
+
+  const [user, setUser] = useState(null);
+
   const [apps, setApps] = useState([]);
   const [reports, setReports] = useState([]);
   const [name, setName] = useState("");
@@ -10,10 +15,46 @@ export default function Admin() {
 
   const [search, setSearch] = useState("");
 
+  /* =========================
+     🔐 AUTH CHECK
+  ========================= */
   useEffect(() => {
-    fetchApps();
-    fetchReports();
+    checkUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      checkUser();
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
+
+  async function checkUser() {
+    const { data } = await supabase.auth.getUser();
+    setUser(data?.user || null);
+  }
+
+  async function loginWithGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: "google"
+    });
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+    setUser(null);
+  }
+
+  /* =========================
+     📊 DATA FETCH
+  ========================= */
+  useEffect(() => {
+    if (user) {
+      fetchApps();
+      fetchReports();
+    }
+  }, [user]);
 
   async function fetchApps() {
     const { data } = await supabase.from("apps").select("*");
@@ -65,10 +106,49 @@ export default function Admin() {
     a.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  /* =========================
+     🔐 LOGIN SCREEN
+  ========================= */
+  if (!user) {
+    return (
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        background: "#020617",
+        color: "#fff",
+        flexDirection: "column"
+      }}>
+        <h1 style={{ color: "#22c55e" }}>🔥 Loan Guard Admin</h1>
+        <button
+          onClick={loginWithGoogle}
+          style={{
+            marginTop: 20,
+            padding: "12px 20px",
+            fontSize: 16,
+            cursor: "pointer"
+          }}
+        >
+          Continue with Google 🚀
+        </button>
+      </div>
+    );
+  }
+
+  /* =========================
+     🔥 MAIN ADMIN UI
+  ========================= */
   return (
     <div style={{ padding: 20, background: "#020617", minHeight: "100vh", color: "#fff" }}>
       
       <h1 style={{ color: "#22c55e" }}>🔥 Loan Guard Admin</h1>
+
+      {/* 👤 USER */}
+      <div style={{ marginTop: 10 }}>
+        <p>👤 {user.email}</p>
+        <button onClick={logout}>Logout</button>
+      </div>
 
       {/* 📊 STATS */}
       <div style={{ display: "flex", gap: 20, marginTop: 20 }}>
