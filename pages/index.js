@@ -8,6 +8,8 @@ export default function Admin() {
   const [link, setLink] = useState("");
   const [risk, setRisk] = useState("low");
 
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
     fetchApps();
     fetchReports();
@@ -24,6 +26,8 @@ export default function Admin() {
   }
 
   async function addApp() {
+    if (!name || !link) return alert("Fill all fields");
+
     await supabase.from("apps").insert([
       {
         name,
@@ -33,6 +37,11 @@ export default function Admin() {
         min_score: 600
       }
     ]);
+
+    setName("");
+    setLink("");
+    setRisk("low");
+
     fetchApps();
   }
 
@@ -46,12 +55,30 @@ export default function Admin() {
     fetchApps();
   }
 
+  /* 🔥 STATS */
+  const totalApps = apps.length;
+  const highRiskApps = apps.filter(a => a.risk === "high").length;
+  const totalReports = reports.length;
+
+  /* 🔍 SEARCH FILTER */
+  const filteredApps = apps.filter(a =>
+    a.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div style={{ padding: 20 }}>
-      <h1>🔥 Loan Guard Admin</h1>
+    <div style={{ padding: 20, background: "#020617", minHeight: "100vh", color: "#fff" }}>
+      
+      <h1 style={{ color: "#22c55e" }}>🔥 Loan Guard Admin</h1>
+
+      {/* 📊 STATS */}
+      <div style={{ display: "flex", gap: 20, marginTop: 20 }}>
+        <div>📱 Apps: {totalApps}</div>
+        <div>🚨 High Risk: {highRiskApps}</div>
+        <div>📢 Reports: {totalReports}</div>
+      </div>
 
       {/* ➕ ADD APP */}
-      <div style={{ marginTop: 20 }}>
+      <div style={{ marginTop: 30 }}>
         <h2>Add App</h2>
 
         <input
@@ -66,7 +93,7 @@ export default function Admin() {
           onChange={e => setLink(e.target.value)}
         />
 
-        <select onChange={e => setRisk(e.target.value)}>
+        <select value={risk} onChange={e => setRisk(e.target.value)}>
           <option value="low">Low</option>
           <option value="medium">Medium</option>
           <option value="high">High</option>
@@ -75,17 +102,28 @@ export default function Admin() {
         <button onClick={addApp}>Add</button>
       </div>
 
+      {/* 🔍 SEARCH */}
+      <div style={{ marginTop: 30 }}>
+        <input
+          placeholder="Search apps..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ padding: 10, width: "100%" }}
+        />
+      </div>
+
       {/* 📱 APPS */}
       <div style={{ marginTop: 30 }}>
         <h2>Apps</h2>
 
-        {apps.map(app => (
+        {filteredApps.map(app => (
           <div
             key={app.id}
             style={{
-              background: "#111",
+              background: app.risk === "high" ? "#7f1d1d" : "#111",
               padding: 10,
-              marginTop: 10
+              marginTop: 10,
+              borderRadius: 8
             }}
           >
             <h3>{app.name}</h3>
@@ -109,14 +147,16 @@ export default function Admin() {
             style={{
               background: "#111",
               padding: 10,
-              marginTop: 10
+              marginTop: 10,
+              borderRadius: 8
             }}
           >
-            <p>{r.app_name}</p>
+            <p><b>{r.app_name}</b></p>
             <p>{r.reason}</p>
           </div>
         ))}
       </div>
+
     </div>
   );
-  }
+}
